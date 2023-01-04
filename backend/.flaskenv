@@ -1,0 +1,2 @@
+FLASK_APP=solver.py
+FLASK_ENV=development
