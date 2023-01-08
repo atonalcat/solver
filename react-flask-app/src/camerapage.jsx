@@ -11,7 +11,7 @@ function Tmp(){
       height={720}
       screenshotFormat="image/jpeg"
       width={1280}
-      videoConstraints={videoConstraints}
+      // videoConstraints={videoConstraints}
     >
       {({ getScreenshot }) => (
         <button

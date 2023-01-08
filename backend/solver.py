@@ -2402,6 +2402,7 @@ def main():
     #cube1.l('scramble')
     #cube1.u('scramble')
     with open("imageToSave.png", "wb") as fh:
+        print(str)
         fh.write(base64.decodebytes(str.encode(body.split(',')[-1])))
     return {'cross': cube1.cross,
             'first': cube1.first,
