@@ -1,18 +1,23 @@
 import time
 from flask import Flask
-from flask import request
+from flask import request, jsonify
 import base64
+import io
+import torch
+import cv2
+import numpy as np
+from PIL import Image
 
 app = Flask(__name__)
 
 class cube:
     def __init__(self):
-        self.top = ["r", "y", "y", "w", "y", "w", "w", "g", "r"]
-        self.bottom = ["r", "b", "r", "r", "w", "y", "o", "r", "b"]
-        self.back = ["b", "o", "g", "y", "b", "b", "o", "w", "g"]
-        self.front = ["g", "w", "y", "r", "g", "g", "b", "o", "g"]
-        self.left = ["y", "o", "o", "r", "r", "y", "y", "g", "w"]
-        self.right = ["b", "b", "o", "o", "o", "b", "w", "g", "w"]
+        self.top = ["y", "y", "y", "y", "y", "y", "y", "y", "y"]
+        self.bottom = ["w", "w", "w", "w", "w", "w", "w", "w", "w"]
+        self.back = ["b", "b", "b", "b", "b", "b", "b", "b", "b"]
+        self.front = ["g", "g", "g", "g", "g", "g", "g", "g", "g"]
+        self.left = ["r", "r", "r", "r", "r", "r", "r", "r", "r"]
+        self.right = ["o", "o", "o", "o", "o", "o", "o", "o", "o"]
         self.c = [self.top, self.bottom, self.left, self.right, self.front, self.back]
         self.cross=[]
         self.first=[]
@@ -21,6 +26,15 @@ class cube:
         self.pll=[]
         self.scramble=[]
         self.auf=[]
+
+    def setState(self, top, bottom, back, front, left, right):
+        self.top = top
+        self.bottom = bottom
+        self.back = back
+        self.front = front
+        self.left = left
+        self.right = right
+        self.c = [self.top, self.bottom, self.left, self.right, self.front, self.back]
     def gettop(self):
         top=1
         return self.top 
@@ -2303,20 +2317,131 @@ class cube:
         if self.c==c:
                     return "Complete!"
         else:
+            self.cross=[]
+            self.first=[]
+            self.ftl=[]
+            self.oll=[]
+            self.pll=[]
+            self.scramble=[]
+            self.auf=[]
             return "Your cube is either unsolvable or there was an input mistake. Please try entering the colours again."
 
         
 
         
+# solves cube via WCA input
+@app.route('/strsolver', methods=["POST"])
+def main2():
+    body = request.json['body']
+    body = body.replace(" ", "").replace(",", "").lower()
+    print(body)
+    moves = set(['r', 'u', 'l', 'b', 'f', 'd'])
+    validInput, error = True, None
+    cube1 = cube()
+    i = 0
+    while i < len(body):
+        prime, count = False, 1
+        if body[i] not in moves:
+            validInput, error = False, 'Invalid input, please input scrambles based off of WCA format'
+            break
+        move = body[i]
+        while i + 1 < len(body) and body[i + 1] not in moves:
+            i += 1
+            if body[i] == "'":
+                prime = not prime
+            elif ord('0') <= ord(body[i]) <= ord('9'):
+                count = int(body[i])
+            else:
+                validInput, error = False, 'Invalid input, please input scrambles based off of WCA format'
+                break
+        for j in range(count):
+            if not prime:
+                if move == "r":
+                    cube1.l('scramble')
+                elif move == "u":
+                    cube1.d('scramble')
+                elif move == "d":
+                    cube1.u('scramble')
+                elif move == "b":
+                    cube1.b('scramble')
+                elif move == "l":
+                    cube1.r('scramble')
+                elif move == "f":
+                    cube1.f('scramble')
+            else:
+                if move == "r":
+                    cube1.li('scramble')
+                elif move == "u":
+                    cube1.di('scramble')
+                elif move == "d":
+                    cube1.ui('scramble')
+                elif move == "b":
+                    cube1.bi('scramble')
+                elif move == "l":
+                    cube1.ri('scramble')
+                elif move == "f":
+                    cube1.fi('scramble')
+        i += 1
+    cube2D = []
+    cube2D.append(tuple(cube1.c[0]))
+    cube2D.append(tuple(cube1.c[2]))
+    cube2D.append(tuple(cube1.c[4]))
+    cube2D.append(tuple(cube1.c[3]))
+    cube2D.append(tuple(cube1.c[5]))
+    cube2D.append(tuple(cube1.c[1]))
+    cube1.wcross('w', 'g')
+    cube1.wcross('w', 'r')
+    cube1.wcross('w', 'o')
+    cube1.wcross('w', 'b')
+    cube1.wface('w', 'g', 'r')
+    cube1.wface('w', 'o', 'g')
+    cube1.wface('w', 'r', 'b')
+    cube1.wface('w', 'b', 'o')
+    cube1.tl('g', 'o')
+    cube1.tl('r', 'g')
+    cube1.tl('o', 'b')
+    cube1.tl('b', 'r')
+    cube1.olastlayer()
+    cube1.olastlayer()
+    cube1.olastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.adjuf()
+    cube1.simplify('cross')
+    cube1.simplify('first')
+    cube1.simplify('ftl')
+    cube1.simplify('oll')
+    cube1.simplify('pll')
+    cube1.replace('cross')
+    cube1.replace('first')
+    cube1.replace('ftl')
+    cube1.replace('oll')
+    cube1.replace('pll')
+    return {'cross': cube1.cross,
+            'first': cube1.first,
+            'ftl': cube1.ftl,
+            'oll': cube1.oll,
+            'pll': cube1.pll,
+            'auf': cube1.auf,
+            'scramble': cube1.scramble,
+            'cubestate': cube1.isSolved(),
+            'valid': validInput,
+            'error': error,
+            'state': cube2D}
 
-
-
+# endpoint that is a "sandbox" to test full stack and cube class functionality
 @app.route('/solver', methods=["POST"])
 def main():
     body = request.json['body']
     cube1 = cube()
     cube2 = cube()
-    # cube1.u('scramble')
+    cube1.u('scramble')
     # cube1.r('scramble')
     # cube1.fi('scramble')
     # cube1.di('scramble')
@@ -2401,9 +2526,10 @@ def main():
     #cube1.ui('scramble')
     #cube1.l('scramble')
     #cube1.u('scramble')
-    with open("imageToSave.png", "wb") as fh:
-        print(str)
-        fh.write(base64.decodebytes(str.encode(body.split(',')[-1])))
+    if body != "brawlstars":
+        with open("imageToSave.png", "wb") as fh:
+            print(body)
+            fh.write(base64.decodebytes(str.encode(body.split(',')[-1])))
     return {'cross': cube1.cross,
             'first': cube1.first,
             'ftl': cube1.ftl,
@@ -2413,4 +2539,305 @@ def main():
             'scramble': cube1.scramble,
             'cubestate': body}
 
+model = torch.hub.load(
+    'ultralytics/yolov5',          # Official GitHub repo
+    'custom', 
+    path=r'./models/best.pt',
+    force_reload=True              # optional, but ensures up-to-date
+)
+model.iou = 0.45
+model.conf = 0.5
 
+############################
+# 3) Helper functions
+############################
+def decode_base64_image(image_b64):
+    """
+    Convert a base64-encoded string to an OpenCV BGR image.
+    """
+    image_data = base64.b64decode(image_b64.split(',')[-1])  # remove "data:image/..."
+    pil_image  = Image.open(io.BytesIO(image_data)).convert('RGB')
+    np_image   = np.array(pil_image)
+    cv_image   = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+    return cv_image
+
+def approximate_color(bgr_patch):
+    """
+    Placeholder color approximation. 
+    Real approach might use YOLO's 'class' ID or average BGR→HSV→closest color.
+    For demo, let's pretend it returns a single color name.
+    """
+    # e.g. always 'white' for demonstration
+    return "white"
+
+def map_color_name_to_letter(name):
+    """
+    Map full color names from the frontend/ML to the single-letter codes 
+    used by your 'cube' class.
+    Adjust as needed.
+    """
+    name_lower = name.lower()
+    mapping = {
+        "white":  "w",
+        "yellow": "y",
+        "blue":   "b",
+        "green":  "g",
+        "red":    "r",
+        "orange": "o",
+        "grey":   "x",  # If you want a placeholder
+    }
+    return mapping.get(name_lower, "x")  # default to 'x' if unknown
+
+def determine_face_from_center_color(color_name):
+    """
+    Given the center color name (e.g. "green"), return
+    which face it corresponds to (e.g. "front").
+    """
+    color_name = color_name.lower()
+    if color_name in ["green", "g"]:
+        return "front"
+    elif color_name in ["blue", "b"]:
+        return "back"
+    elif color_name in ["white", "w"]:
+        return "down"
+    elif color_name in ["yellow", "y"]:
+        return "up"
+    elif color_name in ["orange", "o"]:
+        return "right"
+    elif color_name in ["red", "r"]:
+        return "left"
+    else:
+        # If it's something unknown, default to "front" or handle differently
+        return "front"
+# previous color detecting method without ML
+# def approximate_color(bgr_patch):
+#     """
+#     Given an image patch in BGR, return a string color name like
+#     "white", "yellow", "green", "blue", "red", "orange".
+#     """
+
+#     # 1) Compute the average B, G, R values
+#     avg_bgr = bgr_patch.mean(axis=(0,1))  # shape: (3,)
+
+#     # 2) Convert that average color to a 1x1 HSV image
+#     color_bgr_1x1 = np.uint8([[avg_bgr]])  # shape: (1,1,3)
+#     color_hsv_1x1 = cv2.cvtColor(color_bgr_1x1, cv2.COLOR_BGR2HSV)
+#     h, s, v = color_hsv_1x1[0][0]  # Just get the single HSV pixel
+
+#     # 3) Compare h,s,v against thresholds
+#     #    NOTE: Hue is [0..179] in OpenCV, Saturation/Value are [0..255]
+#     #    You can refine these thresholds as needed.
+
+#     if s < 30 and v > 200:
+#         # low saturation, high brightness → likely "white"
+#         return "white"
+
+#     # Rough hue ranges for typical Rubik’s colors (very approximate!):
+#     #   red:     h < 10 or h > 160
+#     #   orange:  10 < h < 25
+#     #   yellow:  25 < h < 35
+#     #   green:   40 < h < 85
+#     #   blue:    90 < h < 130
+#     #   etc.
+#     # Tweak these to match your lighting conditions.
+
+#     if ((h < 5) or (h > 175)) and s > 60:
+#         return "red"
+#     elif 5 <= h < 25 and s > 60:
+#         return "orange"
+#     elif 25 <= h < 35 and s > 60:
+#         return "yellow"
+#     elif 40 <= h < 85 and s > 60:
+#         return "green"
+#     elif 90 <= h < 130 and s > 60:
+#         return "blue"
+
+#     # If none of the above matched well, guess "white" or "unknown"
+#     return "white"
+
+@app.route('/recognize-face', methods=['POST'])
+def recognize_face():
+    """
+    1) Receives { "image": "data:image/jpeg;base64,..." } from the frontend.
+    2) Decodes the image, runs YOLO detection.
+    3) If exactly 9 squares are found, derive color codes and return them.
+       Otherwise, return an error.
+    """
+    data = request.get_json()
+    image_b64 = data.get('image')
+    if not image_b64:
+        return jsonify({"error": "No image data provided"}), 400
+
+    # Decode the base64 image
+    frame = decode_base64_image(image_b64)
+
+    # YOLO detection
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = model(frame_rgb, size=640)  
+    # results = model(frame_rgb)
+    detections = results.xyxy[0].cpu().numpy()
+
+    centered = []
+    for d in detections:
+        x1, y1, x2, y2, conf, cls_id = d[:6]
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
+        centered.append((cy, cx, d))
+    if len(centered) != 9:
+        return jsonify({
+            "error": f"Expected 9 squares, but detected {len(boxes)}. Please re-capture the photo."
+        }), 400
+    # Sort by cy ascending, so top squares come first
+    centered.sort(key=lambda x: x[0])  # x[0] = cy
+
+    # Slice into top/middle/bottom rows
+    # (assuming we have exactly 9 squares)
+    top_row    = centered[0:3]
+    middle_row = centered[3:6]
+    bottom_row = centered[6:9]
+
+    # Within each row, sort by cx ascending (left to right)
+    top_row.sort(key=lambda x: x[1])    
+    middle_row.sort(key=lambda x: x[1]) 
+    bottom_row.sort(key=lambda x: x[1]) 
+
+    # Re-combine into final row-major list of boxes
+    final_order = top_row + middle_row + bottom_row
+
+    # Extract the actual detection from each tuple
+    final_boxes = [t[2] for t in final_order]  
+
+    # Now final_boxes[0..2] = top row (L→R),
+    #    final_boxes[3..5] = middle row (L→R),
+    #    final_boxes[6..8] = bottom row (L→R).
+    color_map = {
+        0: "blue",
+        1: "green",
+        2: "orange",
+        3: "red",
+        4: "white",
+        5: "yellow"
+    }
+    raw_colors = []
+    for box in final_boxes:
+        x1, y1, x2, y2, conf, cls_id = box[:6]
+        color_str = color_map[int(cls_id)]
+        raw_colors.append(color_str)
+    center_color_name = raw_colors[4]
+    faceName = determine_face_from_center_color(center_color_name)
+    # Map color names (e.g. "white") to single-letter codes (e.g. "w")
+    mapped_colors = [map_color_name_to_letter(c) for c in raw_colors]
+
+    response = {
+        "faceName": faceName,
+        "colors": raw_colors
+    }
+    return jsonify(response), 200
+
+
+# solving cube by state
+@app.route('/solve-cube', methods=['POST'])
+def solve_cube():
+    """
+    1) Receives the entire cube state in JSON, e.g.:
+       {
+         "up":    ["white","white","blue", ... 9 total ],
+         "left":  [...],
+         "front": [...],
+         "right": [...],
+         "back":  [...],
+         "down":  [...]
+       }
+    2) Map each color name to single-letter code, store in 'cube'.
+    3) Solve and return the solution moves in JSON.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No cube data provided"}), 400
+
+    # Create a new 'cube'
+    cube1 = cube()
+
+    # For each face: convert color words to single-letter codes and call set_face
+    face_map = {
+      "up":    "up",
+      "down":  "down",
+      "front": "front",
+      "back":  "back",
+      "left":  "left",
+      "right": "right"
+    }
+    tempTop, top = data["up"], []
+    tempBottom, bottom = data["down"], []
+    tempRight, right = data["right"], []
+    tempLeft, left = data["left"], []
+    tempFront, front = data["front"], []
+    tempBack, back = data["back"], []
+    for i in tempTop:
+        top.append(i[0])
+    for i in tempBottom:
+        bottom.append(i[0])
+    for i in tempRight:
+        right.append(i[0])
+    for i in tempLeft:
+        left.append(i[0])
+    for i in tempFront:
+        front.append(i[0])
+    for i in tempBack:
+        back.append(i[0])
+    cube1.setState(top, bottom, back, front, left, right)
+
+    cube1.wcross('w', 'g')
+    cube1.wcross('w', 'r')
+    cube1.wcross('w', 'o')
+    cube1.wcross('w', 'b')
+    cube1.wface('w', 'g', 'r')
+    cube1.wface('w', 'o', 'g')
+    cube1.wface('w', 'r', 'b')
+    cube1.wface('w', 'b', 'o')
+    cube1.tl('g', 'o')
+    cube1.tl('r', 'g')
+    cube1.tl('o', 'b')
+    cube1.tl('b', 'r')
+    cube1.olastlayer()
+    cube1.olastlayer()
+    cube1.olastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.plastlayer()
+    cube1.adjuf()
+    cube1.simplify('cross')
+    cube1.simplify('first')
+    cube1.simplify('ftl')
+    cube1.simplify('oll')
+    cube1.simplify('pll')
+    cube1.replace('cross')
+    cube1.replace('first')
+    cube1.replace('ftl')
+    cube1.replace('oll')
+    cube1.replace('pll')
+    # print({'cross': cube1.cross,
+    #         'first': cube1.first,
+    #         'ftl': cube1.ftl,
+    #         'oll': cube1.oll,
+    #         'pll': cube1.pll,
+    #         'auf': cube1.auf,
+    #         'cubestate': cube1.isSolved()})
+    return {'cross': cube1.cross,
+            'first': cube1.first,
+            'ftl': cube1.ftl,
+            'oll': cube1.oll,
+            'pll': cube1.pll,
+            'auf': cube1.auf,
+            'scramble': cube1.scramble,
+            'cubestate': cube1.isSolved(),
+            'valid': True}
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -4,6 +4,8 @@ import './index.css';
 import App from './App';
 import Frontpage from './frontpage';
 import Camera from './camerapage';
+import Scramble from './scramble';
+import Parent from './Parent';
 import Tmp from './tmp';
 import reportWebVitals from './reportWebVitals';
 import {
@@ -15,6 +17,14 @@ const router = createBrowserRouter([
     path: "/",
     element: <Frontpage />,
   }, 
+  {
+    path: "/scramble",
+    element: <Scramble />,
+  },
+  {
+    path: "/inputscramble",
+    element: <Parent />,
+  },
   {
     path: "/camera",
     element: <Camera />,
